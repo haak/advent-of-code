@@ -10,15 +10,27 @@ def read_input():
     int_code = test_input.split(",")
     print(int_code)
     while current_loc < len(int_code):
-        if int_code[current_loc] == 99:
+        print("current loc: " + str(current_loc))
+        if int_code[current_loc] == "99":
+            print("hello")
             return
         
-        current_loc += 1
-    opcode = int_code[instruction_start]
-    loc_1 = int_code[instruction_start+1]
-    loc_2 = int_code[instruction_start+2]
-    result_loc = int_code[instruction_start+3]
-    
+        opcode = int_code[current_loc]
+        print("opcode " + opcode)
+        print(current_loc)
+        loc_1 = int_code[current_loc+1]
+        loc_2 = int_code[current_loc+2]
+        result_loc = int_code[current_loc+3]
+        if opcode == 2:
+            return
+        if opcode == "1":
+            result = int_code[loc_1] + int_code[loc_2]
+            print("result" + result)
+            int_code[result_loc] = result
+            return
+        current_loc += 4
+    print(int_code)
+
 
 
 
