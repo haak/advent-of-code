@@ -44,17 +44,20 @@ def read_input():
                     result = int_code[loc_1] * int_code[loc_2]
                     # print("result " + str(result))
                     int_code[result_loc] = result
+                    current_loc += 4
                 if opcode == 1:
                     result = int_code[loc_1] + int_code[loc_2]
                     # print("result " + str(result))
                     int_code[result_loc] = result
+                    current_loc += 4
                 
                 if opcode == 3:
                     # need to update pointer by just 2
+                    current_loc += 2 
                 if opcode == 4:
                     # need to update pointer by just 2
+                    current_loc += 2 
                 
-                current_loc += 4
         
         
             # print(int_code)
