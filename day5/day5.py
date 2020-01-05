@@ -57,6 +57,7 @@ def read_input():
                 if opcode == 4:
                     # need to update pointer by just 2
                     current_loc += 2 
+                    # need to check for another number here.
                 
         
         
