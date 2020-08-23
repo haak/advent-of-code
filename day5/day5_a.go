@@ -55,6 +55,7 @@ func main() {
 		// takes the input and parses it then calls runInstruction based on the input 
 
 		opcode := num[programCounter]
+		// func stuff
 
 
 
@@ -67,6 +68,7 @@ func main() {
 		// // check opcode
 		// if num[i] == 1 {
 		// 	// run func 1
+
 
 		// 	num[num[i+3]] = a + b // num[dest] = num 1 + num 2
 		// } else if num[i] == 2 {
