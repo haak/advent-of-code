@@ -13,8 +13,8 @@ func main() {
 
 	// Putting temp input here for TESTING
 
-	// line := "1002,4,3,4,33"
-	line := readInput()
+	line := "3,9,8,9,10,9,4,9,99,-1,8"
+	// line := readInput()
 	// fmt.Println("line = ", line)
 	// fmt.Println("\n")
 
@@ -89,7 +89,7 @@ func main() {
 		switch opCode {
 
 		case 1:
-			
+
 			// fmt.Println("case 1:", a," ", b, " mode1: ", paramMode1, " mode2: ", paramMode2, " location ", num[num[programCounter+3]])
 			// fmt.Println(num)
 			num[num[programCounter+3]] = a + b // num[dest] = num 1 + num 2
@@ -107,9 +107,48 @@ func main() {
 			// fmt.Println(num[num[programCounter+1]])
 			programCounter += 2
 		case 4:
-			fmt.Println("case 4")
+
 			fmt.Println(num[num[programCounter+1]])
 			programCounter += 2
+
+		case 5: // Jump if true
+			fmt.Println("case 5")
+			// if the first param is non-zero 
+			// set instruction pointer to the value from the 2nd param
+			if num[programCounter+1] != 0{
+				programCounter = num[num[programCounter+2]]
+			}
+
+		case 6: // jump if false
+			fmt.Println("case 6")
+			// if the first param is zero
+			// set instruction pointer to the value at the 2nd param 
+			if num[programCounter+1] == 0{
+				programCounter = num[num[programCounter+2]]
+			}
+
+
+		case 7: // less than 
+			fmt.Println("case 7")
+			// if the first param is less than second param 
+			// set 1 in the position given by the third param 
+			// otherwise store 0
+			if num[programCounter+1] < num[programCounter+2]{
+				num[programCounter+3] = 1
+			}else {
+				num[programCounter+3] = 0
+			}
+
+		case 8: // equals 
+			fmt.Println("case 8")
+			// if the first param is == second param 
+			// store 1 in the position given by third param 
+			// otherwise store 0 
+			if num[programCounter+1] == num[programCounter+2]{
+				num[programCounter+3] = 1
+			}else {
+				num[programCounter+3] = 0
+			}
 
 		case 99:
 			programCounter = -1
@@ -117,53 +156,10 @@ func main() {
 		default:
 			fmt.Println("Error at instruction number ", programCounter)
 			os.Exit(3)
-			
 
 		}
-		// break
-
-		// 1002 ==
-
-		// parse
-		// 1004 %100 = 4
-		// 4 % 100 = 4
-		// fmt.Println(num[i])
-
-		// a := num[num[i+1]] // num[loc 1] = num 1
-		// b := num[num[i+2]] // num[loc 2] = num 2
-
-		// // check opcode
-		// if num[i] == 1 {
-		// 	// run func 1
-
-		// 	num[num[i+3]] = a + b // num[dest] = num 1 + num 2
-		// } else if num[i] == 2 {
-		// 	// run func 2
-		// 	num[num[i+3]] = a * b
-		// } else if num[i] == 3 {
-		// 	// opcode 3
-		// 	// should move the number 2 back because we only use 2 not 4
-		// 	// takes one input and saves it at the the address
-		// 	num[num[i+1]] = num[i+1]
-		// 	i-=2
-
-		// } else if num[i] == 4 {
-		// 	fmt.Println( num[i+1])
-		// 	return
-		// 	// should move the number
-		// 	// opcode 4
-
-		// } else if num[i] == 99 {
-
-		// 	break
-		// } else {
-		// 	fmt.Println("ERROR")
-		// 	fmt.Println(i)
-		// 	break
-		// }
 
 	}
-	
 
 }
 
