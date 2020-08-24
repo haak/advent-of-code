@@ -55,11 +55,14 @@ func main() {
 		// takes the input and parses it then calls runInstruction based on the input 
 
 		opcode := num[programCounter]
-		// func stuff
+		// this could be up to 4 numbers
+		fmt.Println(opcode)
 
 
 
-
+		// parse 
+		// 1004 %100 = 4
+		// 4 % 100 = 4
 		// fmt.Println(num[i])
 
 		// a := num[num[i+1]] // num[loc 1] = num 1
@@ -96,6 +99,7 @@ func main() {
 		// 	fmt.Println(i)
 		// 	break
 		// }
+
 
 	}
 	fmt.Println(num[0])
@@ -151,7 +155,7 @@ func readInput() (line string){
 		}
 	}
 	line = scanner.Text()
-	
+	return line 
 
 
 }
