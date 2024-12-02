@@ -23,3 +23,30 @@ Cargo.lock
 *.pdb
 
 # End of https://www.toptal.com/developers/gitignore/api/rust
+2021/rust/inputs/day01.txt
+2021/rust/inputs/day02.txt
+2021/rust/inputs/day03.txt
+2021/rust/inputs/day04.txt
+2021/rust/inputs/day05.txt
+2021/rust/inputs/day06.txt
+2021/rust/inputs/day07.txt
+2021/rust/inputs/sample.txt
+2020/python/day08/sample.txt
+2021/python/inputs/day01.txt
+2021/python/inputs/day02.txt
+2021/python/inputs/day03.txt
+2021/python/inputs/day04.txt
+2021/python/inputs/day05.txt
+2021/python/inputs/day06.txt
+2021/python/inputs/day07.txt
+2021/python/inputs/sample.txt
+2019/go/day02/in.txt
+2019/python/day1/in.txt
+2019/python/day1/out.txt
+2019/python/day3/main
+2022/rust/test0
+2022/rust/inputs/day01.txt
+2022/rust/inputs/day02.txt
+2022/rust/inputs/day03.txt
+2022/rust/inputs/day04.txt
+2022/rust/inputs/day05.txt
