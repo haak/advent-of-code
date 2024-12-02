@@ -1,0 +1,14 @@
+[package]
+name = "advent_of_code"
+version = "0.1.0"
+authors = ["Scoder12"]
+# edition = "2018"
+edition = "2021"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+vectrix = "0.1.2"
+array2d = "0.2.1"
+itertools = "0.10"
+statistical = "1.0.0"
+hashbrown = "0.11"
