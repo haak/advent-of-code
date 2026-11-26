@@ -92,3 +92,6 @@ build/
 
 # 2025 puzzle input (download your own)
 2025/python/day*/input.txt
+2025/C/day*/input.txt
+# compiled C binaries
+2025/C/day*/day[0-9][0-9]
