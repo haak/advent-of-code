@@ -10,11 +10,12 @@ folder.
 
 ```
 2019/  go, python, rust
-2020/  python
+2020/  python, rust
 2021/  rust, python
 2022/  rust, python
 2023/  rust (fspoettel template), gleam, zig
 2024/  C, python, zig, rust
+2025/  python (day 01)
 ```
 
 | Year | Folders | Notes |
@@ -25,6 +26,7 @@ folder.
 | 2022 | `2022/rust`, `2022/python` | Rust days, Python notes |
 | 2023 | `2023/rust`, `2023/gleam`, `2023/zig/day01` | Rust is the [fspoettel template](https://github.com/fspoettel/advent-of-code-rust) with day 01 solved; Gleam and Zig are day 01 only |
 | 2024 | `2024/C`, `2024/python`, `2024/zig`, `2024/rust` | C days 03–04, Python days 03–05, Zig bit-torrent experiments, Rust days 01–02 |
+| 2025 | `2025/python/day01` | Secret Entrance dial — part 1 (landings on 0) and part 2 (all clicks at 0) |
 
 ## Running things
 
