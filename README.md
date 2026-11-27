@@ -15,7 +15,7 @@ folder.
 2022/  rust, python
 2023/  rust (fspoettel template), gleam, zig
 2024/  C, python, zig, rust
-2025/  python (days 01-02), C (days 03-04)
+2025/  python (days 01-02), C (days 03-06)
 ```
 
 | Year | Folders | Notes |
@@ -26,7 +26,7 @@ folder.
 | 2022 | `2022/rust`, `2022/python` | Rust days, Python notes |
 | 2023 | `2023/rust`, `2023/gleam`, `2023/zig/day01` | Rust is the [fspoettel template](https://github.com/fspoettel/advent-of-code-rust) with day 01 solved; Gleam and Zig are day 01 only |
 | 2024 | `2024/C`, `2024/python`, `2024/zig`, `2024/rust` | C days 03–04, Python days 03–05, Zig bit-torrent experiments, Rust days 01–02 |
-| 2025 | `2025/python/day01`, `2025/python/day02`, `2025/C/day03`, `2025/C/day04` | Day 1 dial; Day 2 repeated-block ranges; Day 3 battery banks (greedy 2/12 digits); Day 4 paper-roll grid (single pass + iterative removal) |
+| 2025 | `2025/python/day01`, `2025/python/day02`, `2025/C/day03`..`2025/C/day06` | Day 1 dial; Day 2 repeated-block ranges; Day 3 battery banks (greedy 2/12 digits); Day 4 paper-roll grid; Day 5 ID-range union; Day 6 cephalopod worksheet (rows + vertical columns) |
 
 ## Running things
 
