@@ -51,11 +51,15 @@
  * Run:    ./day02            (reads ./input.txt)
  *         ./day02 other.txt
  *         ./day02 --test     (worked example: 1227775554 / 4174379265)
+ *         ./day02 --viz      (animated walk through the worked example;
+ *                             VIZ_FAST=1 skips the delays)
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "../viz.h"
 
 #define MAX_RANGES 1024        /* the input has far fewer ranges than this */
 #define MAX_FOUND 1000000      /* room for every invalid ID we might find */
@@ -297,12 +301,179 @@ static void solve(Range *ranges, int n, unsigned long long *part1,
     *part2 = sum_unique();
 }
 
+/* ---------- animated walk-through (--viz) ------------------------------ */
+
+#define VIZ_W 50
+#define VIZ_DELAY_MS 45
+
+/* A cheap stand-in for log10() that needs no maths library: one whole unit
+ * per digit, plus a fraction based on where the value sits inside its
+ * decade. Good enough to space values from 10 to 10^10 across the screen. */
+static double viz_log10(unsigned long long v)
+{
+    int d;
+    unsigned long long p;
+    double frac;
+
+    if (v == 0)
+        return 0.0;
+    d = ndigits(v);
+    p = pow10u(d - 1);
+    frac = (double)(v - p) / (double)p;
+    return (double)(d - 1) + frac / 10.0;
+}
+
+static int viz_x(unsigned long long v, unsigned long long maxv)
+{
+    double top = viz_log10(maxv);
+    int x;
+
+    if (top <= 0.0)
+        return 0;
+    x = (int)(viz_log10(v) / top * (VIZ_W - 1));
+    if (x < 0)
+        x = 0;
+    if (x >= VIZ_W)
+        x = VIZ_W - 1;
+    return x;
+}
+
+/* Draw every input range as a bar on the log axis, then a row of '#' marks
+ * for the invalid IDs found so far and the running sum. */
+static void draw_gift(const Range *rs, int n, unsigned long long maxv,
+                      const char *marks, unsigned long long total,
+                      const char *phase)
+{
+    char bar[VIZ_W + 1];
+    int i, j;
+
+    viz_clear();
+    printf(VIZ_BOLD "Day 2 - Gift Shop" VIZ_RESET "\n");
+    printf(VIZ_CYAN "%s" VIZ_RESET "\n\n", phase);
+
+    for (i = 0; i < n; ++i)
+    {
+        int a = viz_x(rs[i].lo, maxv);
+        int b = viz_x(rs[i].hi, maxv);
+
+        /* Tiny ranges would collapse to one character; widen them to three
+         * so every bar is visible. */
+        if (b - a < 2)
+        {
+            b = a + 2;
+            if (b >= VIZ_W)
+            {
+                b = VIZ_W - 1;
+                a = b - 2;
+            }
+        }
+
+        for (j = 0; j < VIZ_W; ++j)
+            bar[j] = ' ';
+        bar[VIZ_W] = '\0';
+        for (j = a; j <= b; ++j)
+            bar[j] = '=';
+        bar[a] = '[';
+        bar[b] = ']';
+
+        printf("%2d  %10llu-%-10llu " VIZ_BLUE "%s" VIZ_RESET "\n",
+               i, rs[i].lo, rs[i].hi, bar);
+    }
+
+    printf("\n    invalid IDs: " VIZ_GREEN "%s" VIZ_RESET "\n", marks);
+    printf("\n    sum so far:  " VIZ_BOLD "%llu" VIZ_RESET "\n", total);
+    fflush(stdout);
+}
+
+/* Find the candidates, sort them, then reveal them one at a time. */
+static int viz(Range *ranges, int n)
+{
+    unsigned long long maxv = 0;
+    unsigned long long total, part1, part2;
+    char marks[VIZ_W + 1];
+    int i;
+
+    for (i = 0; i < n; ++i)
+        if (ranges[i].hi > maxv)
+            maxv = ranges[i].hi;
+
+    viz_begin();
+
+    /* Part 1: exactly two repeats. */
+    n_found = 0;
+    for (i = 0; i < n; ++i)
+        collect(ranges[i].lo, ranges[i].hi, 2, 2);
+    qsort(found, (size_t)n_found, sizeof found[0], by_value);
+
+    memset(marks, ' ', VIZ_W);
+    marks[VIZ_W] = '\0';
+    total = 0;
+    draw_gift(ranges, n, maxv, marks, total,
+              "part 1 - block repeated exactly twice");
+    viz_delay(600);
+
+    for (i = 0; i < n_found; ++i)
+    {
+        if (i > 0 && found[i] == found[i - 1])
+            continue;                  /* do not count duplicates twice */
+        total += found[i];
+        marks[viz_x(found[i], maxv)] = '#';
+        draw_gift(ranges, n, maxv, marks, total,
+                  "part 1 - block repeated exactly twice");
+        viz_delay(VIZ_DELAY_MS);
+    }
+    part1 = total;
+    viz_delay(700);
+
+    /* Part 2: two or more repeats. */
+    n_found = 0;
+    for (i = 0; i < n; ++i)
+        collect(ranges[i].lo, ranges[i].hi, 2, 0);
+    qsort(found, (size_t)n_found, sizeof found[0], by_value);
+
+    memset(marks, ' ', VIZ_W);
+    total = 0;
+    draw_gift(ranges, n, maxv, marks, total,
+              "part 2 - block repeated two or more times");
+    viz_delay(600);
+
+    for (i = 0; i < n_found; ++i)
+    {
+        if (i > 0 && found[i] == found[i - 1])
+            continue;
+        total += found[i];
+        marks[viz_x(found[i], maxv)] = '#';
+        draw_gift(ranges, n, maxv, marks, total,
+                  "part 2 - block repeated two or more times");
+        viz_delay(VIZ_DELAY_MS);
+    }
+    part2 = total;
+
+    printf(VIZ_BOLD "\n  final: part 1 = %llu, part 2 = %llu\n"
+           VIZ_RESET, part1, part2);
+    viz_end();
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     static const char *sample =
         "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,"
         "1698522-1698528,446443-446449,38593856-38593862,565653-565659,"
         "824824821-824824827,2121212118-2121212124";
+
+    if (argc > 1 && strcmp(argv[1], "--viz") == 0)
+    {
+        Range ranges[MAX_RANGES];
+        int n = parse_ranges((char *)sample, ranges, MAX_RANGES);
+
+        if (n < 0)
+        {
+            fprintf(stderr, "bad sample\n");
+            return 1;
+        }
+        return viz(ranges, n);
+    }
 
     if (argc > 1 && strcmp(argv[1], "--test") == 0)
     {

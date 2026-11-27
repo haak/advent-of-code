@@ -52,11 +52,15 @@
  * Run:    ./day06            (reads ./input.txt)
  *         ./day06 other.txt
  *         ./day06 --test     (worked example: 4277556 / 3263827)
+ *         ./day06 --viz      (animated walk through the worked example;
+ *                             VIZ_FAST=1 skips the delays)
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "../viz.h"
 
 #define MAX_ROWS 16       /* the real input has 5 rows; this is generous */
 #define MAX_COLS 8192     /* the real input is 3734 columns wide          */
@@ -267,6 +271,202 @@ static int load(FILE *fp)
     return n_rows >= 2 ? 0 : -1;   /* need at least one number row + operators */
 }
 
+/* ---------- animated walk-through (--viz) ------------------------------ */
+
+#define VIZ_MAX_BLOCKS 256
+#define VIZ_DELAY_MS 220
+
+static int viz_bstart[VIZ_MAX_BLOCKS];
+static int viz_bend[VIZ_MAX_BLOCKS];
+static char viz_bop[VIZ_MAX_BLOCKS];
+static int viz_nblocks;
+
+/* Same block detection as solve(): a block is a run of non-separator
+ * columns, and its operator is the '+' or '*' in the bottom row. */
+static void viz_find_blocks(void)
+{
+    int c = 0;
+    int numeric_rows = n_rows - 1;
+
+    viz_nblocks = 0;
+    while (c < width && viz_nblocks < VIZ_MAX_BLOCKS)
+    {
+        int start, end, i;
+
+        if (is_separator(c))
+        {
+            ++c;
+            continue;
+        }
+
+        start = c;
+        while (c < width && !is_separator(c))
+            ++c;
+        end = c;
+
+        viz_bstart[viz_nblocks] = start;
+        viz_bend[viz_nblocks] = end;
+        viz_bop[viz_nblocks] = 0;
+        for (i = start; i < end; ++i)
+            if (rows[numeric_rows][i] == '+' || rows[numeric_rows][i] == '*')
+            {
+                viz_bop[viz_nblocks] = rows[numeric_rows][i];
+                break;
+            }
+
+        if (viz_bop[viz_nblocks] != 0)
+            ++viz_nblocks;
+    }
+}
+
+/* Draw the worksheet with one problem highlighted.
+ *   mode 0: highlight the whole problem's columns
+ *   mode 1: also highlight row `idx` (part 1 is reading it)
+ *   mode 2: also highlight column `idx` (part 2 is reading it)       */
+static void draw_ws(int bs, int be, int mode, int idx,
+                    unsigned long long total1, unsigned long long total2,
+                    unsigned long long block_ans, char op, int block_no,
+                    int nblocks, const char *phase)
+{
+    int r, c;
+
+    viz_clear();
+    printf(VIZ_BOLD "Day 6 - Trash Compactor" VIZ_RESET "\n\n");
+    printf(VIZ_CYAN "%s" VIZ_RESET "\n\n", phase);
+
+    for (r = 0; r < n_rows; ++r)
+    {
+        printf("  ");
+        for (c = 0; c < width; ++c)
+        {
+            char ch = rows[r][c];
+            int in_block = c >= bs && c < be;
+            int hi = in_block &&
+                     ((mode == 1 && r == idx) || (mode == 2 && c == idx));
+
+            if (hi)
+                printf(VIZ_INVERSE VIZ_YELLOW "%c" VIZ_RESET, ch);
+            else if (ch == '+' || ch == '*')
+                printf(VIZ_MAGENTA "%c" VIZ_RESET, ch);
+            else if (in_block)
+                putchar(ch);
+            else
+                printf(VIZ_DIM "%c" VIZ_RESET, ch);
+        }
+        putchar('\n');
+    }
+
+    printf("\n  problem %d/%d   operator '" VIZ_MAGENTA "%c" VIZ_RESET
+           "'   columns %d..%d\n", block_no + 1, nblocks, op, bs, be - 1);
+
+    if (mode == 1)
+        printf("  reading row %d    -> " VIZ_BOLD "%llu" VIZ_RESET "\n",
+               idx, parse_slice(idx, bs, be));
+    else if (mode == 2)
+        printf("  reading column %d -> " VIZ_BOLD "%llu" VIZ_RESET "\n",
+               idx, parse_column(idx, 0, n_rows - 1));
+
+    printf("  this problem: " VIZ_BOLD "%llu" VIZ_RESET "\n", block_ans);
+    printf("  totals: part 1 = " VIZ_BOLD "%llu" VIZ_RESET
+           "   part 2 = " VIZ_BOLD "%llu" VIZ_RESET "\n", total1, total2);
+    fflush(stdout);
+}
+
+/* Replay both interpretations of every problem, one number at a time. */
+static int viz(FILE *fp)
+{
+    unsigned long long total1 = 0, total2 = 0;
+    int b;
+
+    if (load(fp) != 0)
+        return 1;
+    viz_find_blocks();
+
+    viz_begin();
+
+    for (b = 0; b < viz_nblocks; ++b)
+    {
+        int bs = viz_bstart[b];
+        int be = viz_bend[b];
+        char op = viz_bop[b];
+        unsigned long long p1 = 0, p2 = 0;
+        int r, i, first;
+
+        /* Part 1: one number per row. */
+        draw_ws(bs, be, 0, -1, total1, total2, 0, op, b, viz_nblocks,
+                "part 1 - one number per row");
+        viz_delay(400);
+
+        first = 1;
+        for (r = 0; r < n_rows - 1; ++r)
+        {
+            int has = 0;
+
+            for (i = bs; i < be; ++i)
+                if (rows[r][i] >= '0' && rows[r][i] <= '9')
+                {
+                    has = 1;
+                    break;
+                }
+            if (!has)
+                continue;
+
+            {
+                unsigned long long v = parse_slice(r, bs, be);
+
+                p1 = first ? v : combine(op, p1, v);
+                first = 0;
+            }
+
+            draw_ws(bs, be, 1, r, total1, total2, p1, op, b, viz_nblocks,
+                    "part 1 - one number per row");
+            viz_delay(VIZ_DELAY_MS);
+        }
+
+        /* Part 2: one number per column, top to bottom. */
+        draw_ws(bs, be, 0, -1, total1, total2, p2, op, b, viz_nblocks,
+                "part 2 - one number per column");
+        viz_delay(400);
+
+        first = 1;
+        for (i = bs; i < be; ++i)
+        {
+            int has = 0;
+
+            for (r = 0; r < n_rows - 1; ++r)
+                if (rows[r][i] >= '0' && rows[r][i] <= '9')
+                {
+                    has = 1;
+                    break;
+                }
+            if (!has)
+                continue;
+
+            {
+                unsigned long long v = parse_column(i, 0, n_rows - 1);
+
+                p2 = first ? v : combine(op, p2, v);
+                first = 0;
+            }
+
+            draw_ws(bs, be, 2, i, total1, total2, p2, op, b, viz_nblocks,
+                    "part 2 - one number per column");
+            viz_delay(VIZ_DELAY_MS);
+        }
+
+        total1 += p1;
+        total2 += p2;
+        draw_ws(bs, be, 0, -1, total1, total2, p1, op, b, viz_nblocks,
+                "problem finished");
+        viz_delay(500);
+    }
+
+    printf(VIZ_BOLD "\n  final: part 1 = %llu, part 2 = %llu\n"
+           VIZ_RESET, total1, total2);
+    viz_end();
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     static const char *sample =
@@ -274,6 +474,23 @@ int main(int argc, char **argv)
         " 45 64  387 23 \n"
         "  6 98  215 314\n"
         "*   +   *   +  \n";
+
+    if (argc > 1 && strcmp(argv[1], "--viz") == 0)
+    {
+        FILE *tmp = tmpfile();
+        int rc;
+
+        if (!tmp)
+        {
+            perror("tmpfile");
+            return 1;
+        }
+        fputs(sample, tmp);
+        rewind(tmp);
+        rc = viz(tmp);
+        fclose(tmp);
+        return rc;
+    }
 
     if (argc > 1 && strcmp(argv[1], "--test") == 0)
     {

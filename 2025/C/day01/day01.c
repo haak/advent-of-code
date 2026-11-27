@@ -49,11 +49,15 @@
  * Run:    ./day01            (reads ./input.txt)
  *         ./day01 other.txt
  *         ./day01 --test     (worked example: 3 / 6)
+ *         ./day01 --viz      (animated walk through the worked example;
+ *                             VIZ_FAST=1 skips the delays)
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "../viz.h"
 
 #define START 50        /* the dial's starting position                 */
 #define SIZE 100        /* how many numbers are on the dial             */
@@ -190,6 +194,116 @@ static int run(FILE *fp, int test)
     return 0;
 }
 
+/* ---------- animated walk-through (--viz) ------------------------------ */
+
+#define VIZ_MAX_ROT 4096
+#define VIZ_DELAY_MS 12
+
+/* Draw the 0..99 ring as five rows of twenty numbers.
+ *   current position -> inverted
+ *   every zero       -> green
+ *   multiples of ten -> dimmed (makes the ring easier to scan)
+ * The counters below the dial are the two puzzle answers so far. */
+static void draw_dial(long pos, long landings, long crossings,
+                      int rot, int total, char dir, long dist)
+{
+    int r, c;
+
+    viz_clear();
+    printf(VIZ_BOLD "Day 1 - Secret Entrance" VIZ_RESET "\n\n");
+    printf("rotation %d/%d:  " VIZ_YELLOW "%c%ld" VIZ_RESET "\n\n",
+           rot + 1, total, dir, dist);
+
+    for (r = 0; r < 5; ++r)
+    {
+        printf("   ");
+        for (c = 0; c < 20; ++c)
+        {
+            int v = r * 20 + c;
+
+            if (v == (int)pos)
+                printf(VIZ_INVERSE VIZ_GREEN "%2d" VIZ_RESET " ", v);
+            else if (v == 0)
+                printf(VIZ_GREEN "%2d" VIZ_RESET " ", v);
+            else if (v % 10 == 0)
+                printf(VIZ_DIM "%2d" VIZ_RESET " ", v);
+            else
+                printf("%2d ", v);
+        }
+        putchar('\n');
+    }
+
+    printf("\n  landings on 0 (part 1): " VIZ_CYAN "%ld" VIZ_RESET "\n",
+           landings);
+    printf("  clicks on 0  (part 2): " VIZ_CYAN "%ld" VIZ_RESET "\n",
+           crossings);
+    fflush(stdout);
+}
+
+/* Play the sample one click at a time. This mirrors apply_rotation() but
+ * stops after every single click so the dial can be drawn; the arithmetic
+ * and the counting rules are the same. */
+static int viz(FILE *fp)
+{
+    static char dirs[VIZ_MAX_ROT];
+    static long dists[VIZ_MAX_ROT];
+    char line[MAX_LINE];
+    int n = 0;
+    int i;
+    long pos = START;
+    long landings = 0;
+    long crossings = 0;
+
+    while (fgets(line, sizeof line, fp))
+    {
+        char dir;
+        long dist;
+
+        strip(line);
+        if (line[0] == '\0')
+            continue;
+        if (parse_rotation(line, &dir, &dist) != 0)
+            return 1;
+        if (n >= VIZ_MAX_ROT)
+            break;
+        dirs[n] = dir;
+        dists[n] = dist;
+        ++n;
+    }
+
+    viz_begin();
+    for (i = 0; i < n; ++i)
+    {
+        long step = dirs[i] == 'R' ? 1 : -1;
+        long k;
+
+        for (k = 0; k < dists[i]; ++k)
+        {
+            pos = mod(pos + step, SIZE);
+
+            if (pos == 0)
+            {
+                ++crossings;
+                /* A landing only counts when it is the last click. */
+                if (k == dists[i] - 1)
+                    ++landings;
+            }
+
+            draw_dial(pos, landings, crossings, i, n, dirs[i], dists[i]);
+            viz_delay(VIZ_DELAY_MS);
+        }
+        if (dists[i] == 0 && pos == 0)
+            ++landings;
+
+        viz_delay(180);   /* small pause between rotations */
+    }
+
+    printf(VIZ_BOLD "\n  final: part 1 = %ld, part 2 = %ld\n"
+           VIZ_RESET, landings, crossings);
+    viz_end();
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     /* The worked example from the puzzle description. */
@@ -204,6 +318,24 @@ int main(int argc, char **argv)
         "L99\n"
         "R14\n"
         "L82\n";
+
+    /* Animate the sample. tmpfile lets --viz reuse the same parser. */
+    if (argc > 1 && strcmp(argv[1], "--viz") == 0)
+    {
+        FILE *tmp = tmpfile();
+        int rc;
+
+        if (!tmp)
+        {
+            perror("tmpfile");
+            return 1;
+        }
+        fputs(sample, tmp);
+        rewind(tmp);
+        rc = viz(tmp);
+        fclose(tmp);
+        return rc;
+    }
 
     /* argc is how many command-line words there are; argv[i] is each word.
      * strcmp returns 0 when two strings are equal. */

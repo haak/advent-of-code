@@ -41,10 +41,14 @@
  * Run:    ./day03            (reads ./input.txt)
  *         ./day03 other.txt
  *         ./day03 --test     (worked example + brute-force cross-check)
+ *         ./day03 --viz      (animated walk through the worked example;
+ *                             VIZ_FAST=1 skips the delays)
  */
 
 #include <stdio.h>
 #include <string.h>
+
+#include "../viz.h"
 
 #define MAX_LINE 8192
 #define PART2_DIGITS 12
@@ -171,18 +175,172 @@ static int run(FILE *fp, int test)
     return 0;
 }
 
+/* ---------- animated walk-through (--viz) ------------------------------ */
+
+#define VIZ_MAX_BANKS 256
+#define VIZ_DELAY_MS 80
+
+static char viz_banks[VIZ_MAX_BANKS][MAX_LINE];
+static int viz_lens[VIZ_MAX_BANKS];
+
+/* Draw one bank. Coloured digits mean:
+ *   inverted  the candidate being considered right now
+ *   green     already chosen for the answer
+ *   yellow    inside the window we may still choose from
+ *   dim       too far right to use this round                */
+static void draw_bank(const char *bank, int len, int part, int k,
+                      int start, int last, int best, const char *chosen,
+                      unsigned long long built, int bno, int nbanks,
+                      unsigned long long sum)
+{
+    int i;
+
+    viz_clear();
+    printf(VIZ_BOLD "Day 3 - Lobby" VIZ_RESET
+           "   part %d (keep %d batteries)\n\n", part, k);
+    printf("bank %d/%d   length %d\n\n  ", bno + 1, nbanks, len);
+
+    for (i = 0; i < len; ++i)
+    {
+        if (i == best)
+            printf(VIZ_INVERSE VIZ_YELLOW "%c" VIZ_RESET " ", bank[i]);
+        else if (chosen[i])
+            printf(VIZ_GREEN "%c" VIZ_RESET " ", bank[i]);
+        else if (i >= start && i <= last)
+            printf(VIZ_YELLOW "%c" VIZ_RESET " ", bank[i]);
+        else
+            printf(VIZ_DIM "%c" VIZ_RESET " ", bank[i]);
+    }
+
+    printf("\n  ");
+    for (i = 0; i < len; ++i)
+        printf("%d ", i % 10);
+
+    if (start >= 0)
+        printf("\n\n  may choose from index %d..%d", start, last);
+    else
+        printf("\n\n  choosing ...");
+
+    printf("\n  this bank so far: " VIZ_BOLD "%llu" VIZ_RESET, built);
+    printf("\n  grand total:      " VIZ_BOLD "%llu" VIZ_RESET "\n", sum);
+    fflush(stdout);
+}
+
+/* Load the banks, then replay the greedy choice for k = 2 and k = 12. */
+static int viz(FILE *fp)
+{
+    char line[MAX_LINE];
+    static char chosen[MAX_LINE];
+    int n = 0;
+    int i, part;
+    unsigned long long part1 = 0, part2 = 0;
+
+    while (fgets(line, sizeof line, fp))
+    {
+        strip(line);
+        if (line[0] == '\0')
+            continue;
+        if (n >= VIZ_MAX_BANKS)
+            break;
+        strcpy(viz_banks[n], line);
+        viz_lens[n] = (int)strlen(line);
+        ++n;
+    }
+    if (n == 0)
+        return 1;
+
+    viz_begin();
+
+    for (part = 1; part <= 2; ++part)
+    {
+        int k = part == 1 ? 2 : PART2_DIGITS;
+        unsigned long long sum = 0;
+
+        for (i = 0; i < n; ++i)
+        {
+            const char *bank = viz_banks[i];
+            int len = viz_lens[i];
+            int start = 0;
+            int rem;
+            unsigned long long built = 0;
+
+            if (len < k)
+                continue;
+
+            memset(chosen, 0, sizeof chosen);
+
+            for (rem = k; rem > 0; --rem)
+            {
+                int last = len - rem;
+                int best = start;
+                int j;
+
+                /* Same scan as max_joltage(): pick the biggest digit that
+                 * still leaves enough digits to finish the number. */
+                for (j = start; j <= last; ++j)
+                    if (bank[j] > bank[best])
+                        best = j;
+
+                draw_bank(bank, len, part, k, start, last, best, chosen,
+                          built, i, n, sum);
+                viz_delay(VIZ_DELAY_MS);
+
+                chosen[best] = 1;
+                built = built * 10 + (unsigned long long)(bank[best] - '0');
+                start = best + 1;
+
+                draw_bank(bank, len, part, k, start, last, -1, chosen,
+                          built, i, n, sum);
+                viz_delay(VIZ_DELAY_MS / 2);
+            }
+
+            sum += built;
+            draw_bank(bank, len, part, k, -1, -1, -1, chosen, built,
+                      i, n, sum);
+            viz_delay(500);
+        }
+
+        if (part == 1)
+            part1 = sum;
+        else
+            part2 = sum;
+    }
+
+    printf(VIZ_BOLD "\n  final: part 1 = %llu, part 2 = %llu\n"
+           VIZ_RESET, part1, part2);
+    viz_end();
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *path = "input.txt";
     FILE *fp;
+    static const char *sample =
+        "987654321111111\n"
+        "811111111111119\n"
+        "234234234234278\n"
+        "818181911112111\n";
+
+    if (argc > 1 && strcmp(argv[1], "--viz") == 0)
+    {
+        FILE *tmp = tmpfile();
+        int rc;
+
+        if (!tmp)
+        {
+            perror("tmpfile");
+            return 1;
+        }
+        fputs(sample, tmp);
+        rewind(tmp);
+        rc = viz(tmp);
+        fclose(tmp);
+        return rc;
+    }
 
     if (argc > 1 && strcmp(argv[1], "--test") == 0)
     {
-        static const char *sample =
-            "987654321111111\n"
-            "811111111111119\n"
-            "234234234234278\n"
-            "818181911112111\n";
         /* Run from a temp copy so the same parser is exercised. */
         FILE *tmp = tmpfile();
         int rc;

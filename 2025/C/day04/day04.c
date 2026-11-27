@@ -46,10 +46,14 @@
  * Run:    ./day04            (reads ./input.txt)
  *         ./day04 other.txt
  *         ./day04 --test     (worked example: 13 / 43)
+ *         ./day04 --viz      (animated walk through the worked example;
+ *                             VIZ_FAST=1 skips the delays)
  */
 
 #include <stdio.h>
 #include <string.h>
+
+#include "../viz.h"
 
 #define MAXDIM 600      /* the real grid is smaller than 600 x 600 */
 
@@ -183,6 +187,104 @@ static int run(FILE *fp)
     return 0;
 }
 
+/* ---------- animated walk-through (--viz) ------------------------------ */
+
+/* Draw the current grid. 'o' is a roll that became reachable in this sweep
+ * (shown inverted); '@' is still a roll; '.' is empty floor. */
+static void draw_grid(const char *phase, long reachable, long sweep,
+                      long removed)
+{
+    int r, c;
+
+    viz_clear();
+    printf(VIZ_BOLD "Day 4 - Printing Department" VIZ_RESET "\n\n");
+    printf(VIZ_CYAN "%s" VIZ_RESET "\n\n", phase);
+
+    for (r = 0; r < rows; ++r)
+    {
+        printf("  ");
+        for (c = 0; c < cols; ++c)
+        {
+            char ch = grid[r][c];
+
+            if (ch == 'o')
+                printf(VIZ_INVERSE VIZ_YELLOW "@" VIZ_RESET);
+            else if (ch == '.')
+                printf(VIZ_DIM "." VIZ_RESET);
+            else
+                putchar(ch);
+        }
+        putchar('\n');
+    }
+
+    printf("\n  reachable at the start: " VIZ_CYAN "%ld" VIZ_RESET "\n",
+           reachable);
+    printf("  sweep: " VIZ_BOLD "%ld" VIZ_RESET
+           "   removed so far: " VIZ_BOLD "%ld" VIZ_RESET "\n",
+           sweep, removed);
+    fflush(stdout);
+}
+
+/* Load the sample and replay the removal sweeps, showing each wave. */
+static int viz(FILE *fp)
+{
+    long reachable;
+    long sweep = 0;
+    long removed = 0;
+
+    if (load(fp) != 0)
+        return 1;
+
+    reachable = count_accessible();
+
+    viz_begin();
+    draw_grid("initial grid", reachable, 0, 0);
+    viz_delay(900);
+
+    for (;;)
+    {
+        long found = 0;
+        int r, c;
+
+        /* Mark this sweep's reachable rolls. */
+        for (r = 0; r < rows; ++r)
+            for (c = 0; c < cols; ++c)
+                if (grid[r][c] == '@' && neighbours(r, c) < 4)
+                {
+                    grid[r][c] = 'o';
+                    ++found;
+                }
+
+        if (found == 0)
+        {
+            draw_grid("stable: nothing left to remove", reachable, sweep,
+                      removed);
+            viz_delay(800);
+            break;
+        }
+
+        ++sweep;
+        draw_grid("reachable in this sweep (yellow)", reachable, sweep,
+                  removed);
+        viz_delay(700);
+
+        /* Remove them all at once, exactly like remove_accessible(). */
+        for (r = 0; r < rows; ++r)
+            for (c = 0; c < cols; ++c)
+                if (grid[r][c] == 'o')
+                    grid[r][c] = '.';
+
+        removed += found;
+        draw_grid("after the sweep", reachable, sweep, removed);
+        viz_delay(700);
+    }
+
+    printf(VIZ_BOLD "\n  final: part 1 = %ld, part 2 = %ld\n"
+           VIZ_RESET, reachable, removed);
+    viz_end();
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     static const char *sample =
@@ -196,6 +298,23 @@ int main(int argc, char **argv)
         "@.@@@.@@@@\n"
         ".@@@@@@@@.\n"
         "@.@.@@@.@.\n";
+
+    if (argc > 1 && strcmp(argv[1], "--viz") == 0)
+    {
+        FILE *tmp = tmpfile();
+        int rc;
+
+        if (!tmp)
+        {
+            perror("tmpfile");
+            return 1;
+        }
+        fputs(sample, tmp);
+        rewind(tmp);
+        rc = viz(tmp);
+        fclose(tmp);
+        return rc;
+    }
 
     if (argc > 1 && strcmp(argv[1], "--test") == 0)
     {

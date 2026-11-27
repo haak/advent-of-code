@@ -69,6 +69,23 @@ cd 2019/go/day02 && go run .
 cd 2024/C && cc -O2 day03.c -o day03 && ./day03
 ```
 
+**2025 C visualisations** — every 2025 solver has a `--viz` mode that animates
+the worked example in the terminal. The C program draws its own frames with
+ANSI escapes (colours, cursor movement), so the animation walks the same
+arrays and the same loops as the solver.
+
+```sh
+cd 2025/C/day04
+cc -O2 -Wall -Wextra -o day04 day04.c
+./day04 --test              # checks 13 / 43
+./day04 --viz               # animated walk through the sample
+VIZ_FAST=1 ./day04 --viz    # skip the sleeps (tests, recordings)
+```
+
+`2025/C/viz.h` holds the shared colour, cursor and sleep helpers. Each day's
+`solve()` is untouched; `--viz` re-reads the sample and replays the steps with
+drawing calls in between.
+
 ## Ignored on purpose
 
 Build output (`target/`, `.zig-cache/`, `zig-out/`, `*.o`, `*.a`, `a.out`, `*.beam`,
