@@ -1,14 +1,41 @@
 /* Advent of Code 2025 — Day 3: Lobby
  *
- * Each input line is a bank of battery digits. Turn on exactly k batteries,
- * keeping their order, to make the largest possible number; sum that maximum
- * over all banks.
+ * WHAT THE PUZZLE ASKS
+ * --------------------
+ * Each input line is a bank of battery digits, for example
+ *
+ *     987654321111111
+ *
+ * You must switch on exactly k batteries. The batteries you keep stay in
+ * their original order and spell a number (each digit is one place value).
+ * Pick the batteries that make that number as large as possible. Then add
+ * the best numbers from every bank.
  *
  *   part 1: k = 2
  *   part 2: k = 12
  *
- * Greedy is optimal: for each output position, take the largest digit that
- * still leaves enough digits to fill the remaining positions.
+ * Worked example (--test): part 1 gives 357.
+ *
+ * THE MAIN IDEA
+ * -------------
+ * Greedy works: for the FIRST digit, take the largest digit that still
+ * leaves enough digits to the right to fill the remaining k-1 positions.
+ * Then repeat for the next position, starting just after the one you took.
+ *
+ * Why not a nested loop over every combination? For 12 out of ~100 digits
+ * the number of combinations is astronomically large, but the greedy pass
+ * is O(k * line_length) — a few thousand steps.
+ *
+ * C IDEAS YOU WILL SEE IN THIS FILE
+ * ---------------------------------
+ *   - A string is a `char` array ending in '\0'. `strlen` counts the
+ *     characters before that terminator.
+ *   - `'7' - '0'` converts the character '7' into the number 7, because
+ *     digits are stored in order in the ASCII table.
+ *   - `unsigned long long` holds the 12-digit answers without overflow.
+ *   - `static` functions and globals are private to this file.
+ *   - `fgets` reads one line at a time; `tmpfile` plus `rewind` lets
+ *     --test feed the sample through the same code as the real input.
  *
  * Build:  cc -O2 -Wall -Wextra -o day03 day03.c
  * Run:    ./day03            (reads ./input.txt)
@@ -22,6 +49,11 @@
 #define MAX_LINE 8192
 #define PART2_DIGITS 12
 
+/* Return the largest number obtainable from `bank` by keeping exactly k
+ * digits in their original order.
+ *
+ * `start` is the first index we are still allowed to look at. On each pass
+ * we choose one digit, then move `start` past it. */
 static unsigned long long max_joltage(const char *bank, int len, int k)
 {
     unsigned long long total = 0;
@@ -29,25 +61,41 @@ static unsigned long long max_joltage(const char *bank, int len, int k)
     int rem;
 
     if (k > len)
-        return 0;
+        return 0;              /* cannot pick more digits than exist */
 
+    /* `rem` counts how many digits are still to be chosen, including this
+     * one. It starts at k and counts down to 1. */
     for (rem = k; rem > 0; --rem)
     {
-        int last = len - rem; /* last index we may pick from */
+        /* The chosen index can be at most len - rem: if we picked anything
+         * later, there would not be enough digits left to fill the other
+         * rem - 1 positions. */
+        int last = len - rem;
         int best = start;
         int i;
 
+        /* Scan the allowed window for the biggest digit. Because we only
+         * replace `best` on a strictly greater digit, ties keep the earliest
+         * one, which leaves the most room for later digits. */
         for (i = start; i <= last; ++i)
         {
             if (bank[i] > bank[best])
                 best = i;
         }
+
+        /* Append the chosen digit to the number built so far. Multiplying
+         * by 10 shifts the old digits one place left. */
         total = total * 10 + (unsigned long long)(bank[best] - '0');
+
+        /* Next digit must come after the one we just used. */
         start = best + 1;
     }
     return total;
 }
 
+/* Slow but obviously-correct version for k = 2: try every pair of indices.
+ * --test compares this with the greedy answer, so a bug in the clever code
+ * cannot silently pass the sample. */
 static unsigned long long brute_two(const char *bank, int len)
 {
     unsigned long long best = 0;
@@ -65,6 +113,7 @@ static unsigned long long brute_two(const char *bank, int len)
     return best;
 }
 
+/* Remove trailing whitespace (the newline fgets leaves behind). */
 static void strip(char *s)
 {
     size_t n = strlen(s);
@@ -74,6 +123,8 @@ static void strip(char *s)
         s[--n] = '\0';
 }
 
+/* Read every bank from `fp` and add up both parts.
+ * `test` = 1 means we are running the sample and should check the answer. */
 static int run(FILE *fp, int test)
 {
     char line[MAX_LINE];
@@ -87,8 +138,10 @@ static int run(FILE *fp, int test)
         strip(line);
         len = (int)strlen(line);
         if (len == 0)
-            continue;
+            continue;             /* skip blank lines */
 
+        /* In test mode, prove the greedy result matches brute force for the
+         * two-digit case before trusting it. */
         if (test && brute_two(line, len) != max_joltage(line, len, 2))
         {
             printf("FAIL: %s greedy=%llu brute=%llu\n", line,
@@ -130,12 +183,15 @@ int main(int argc, char **argv)
             "811111111111119\n"
             "234234234234278\n"
             "818181911112111\n";
-        /* run from a temp copy so the same parser is exercised */
+        /* Run from a temp copy so the same parser is exercised. */
         FILE *tmp = tmpfile();
         int rc;
 
         if (!tmp)
+        {
+            perror("tmpfile");
             return 1;
+        }
         fputs(sample, tmp);
         rewind(tmp);
         rc = run(tmp, 1);
